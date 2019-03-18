@@ -33,7 +33,7 @@ namespace Microsoft.EntityFrameworkCore
         /// <summary>Adds objects that are used by the model for this context</summary>
         public static async Task EnsureDbAndTablesCreatedAsync(this DbContext context, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var created = await context.Database.EnsureCreatedAsync(cancellationToken);
+            var created = await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
             if (!created)
             {
                 //https://docs.microsoft.com/en-us/ef/core/managing-schemas/ensure-created
@@ -49,7 +49,7 @@ namespace Microsoft.EntityFrameworkCore
                     {
                         try
                         {
-                            await dependencies.MigrationCommandExecutor.ExecuteNonQueryAsync(new MigrationCommand[] { createTableCommand }, dependencies.Connection, cancellationToken);
+                            await dependencies.MigrationCommandExecutor.ExecuteNonQueryAsync(new MigrationCommand[] { createTableCommand }, dependencies.Connection, cancellationToken).ConfigureAwait(false);
                         }
                         catch
                         {
@@ -69,7 +69,7 @@ namespace Microsoft.EntityFrameworkCore
             bool dbExists = false;
             try
             {
-                if (await context.Database.ExistsAsync(cancellationToken))
+                if (await context.Database.ExistsAsync(cancellationToken).ConfigureAwait(false))
                     dbExists = true;
             }
             catch
@@ -95,7 +95,7 @@ namespace Microsoft.EntityFrameworkCore
                     }
 
                     var commands = new List<String>();
-                    using (var transaction = await context.Database.BeginTransactionAsync(cancellationToken))
+                    using (var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
                     {
 
                         //Drop tables
@@ -106,7 +106,7 @@ namespace Microsoft.EntityFrameworkCore
                                 try
                                 {
                                     var command = $"DROP TABLE IF EXISTS {t}";
-                                    await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken);
+                                    await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
                                     commands.Add(command);
                                 }
                                 catch
@@ -124,7 +124,7 @@ namespace Microsoft.EntityFrameworkCore
                                 try
                                 {
                                     var command = $"DELETE FROM [__EFMigrationsHistory] WHERE MigrationId = '{migrationId}'";
-                                    await context.Database.ExecuteSqlCommandAsync(command, cancellationToken);
+                                    await context.Database.ExecuteSqlCommandAsync(command, cancellationToken).ConfigureAwait(false);
                                     commands.Add(command);
                                 }
                                 catch
@@ -137,11 +137,11 @@ namespace Microsoft.EntityFrameworkCore
                         transaction.Rollback();
                     }
 
-                    using (var transaction = await context.Database.BeginTransactionAsync(cancellationToken))
+                    using (var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
                     {
                         foreach (var command in commands)
                         {
-                            await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken);
+                            await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
                         }
 
                         transaction.Commit();
@@ -149,13 +149,13 @@ namespace Microsoft.EntityFrameworkCore
                 }
                 else if (context.Database.IsInMemory())
                 {
-                    await context.Database.EnsureDeletedAsync(cancellationToken);
+                    await context.Database.EnsureDeletedAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
             else
             {
                 //As long as the Db is online this will physically delete db.
-                await context.Database.EnsureDeletedAsync(cancellationToken);
+                await context.Database.EnsureDeletedAsync(cancellationToken).ConfigureAwait(false);
             }
         }
         #endregion
@@ -185,7 +185,7 @@ namespace Microsoft.EntityFrameworkCore
             var relationalDatabaseCreator = databaseFacade.GetService<IDatabaseCreator>() as RelationalDatabaseCreator;
             if (relationalDatabaseCreator != null)
             {
-                return await relationalDatabaseCreator.ExistsAsync(cancellationToken);
+                return await relationalDatabaseCreator.ExistsAsync(cancellationToken).ConfigureAwait(false);
 
             }
             else
@@ -213,7 +213,7 @@ namespace Microsoft.EntityFrameworkCore
                         )
                         THEN CAST(1 AS BIT)
                         ELSE CAST(0 AS BIT) END;";
-                        var exists = (long)(await command.ExecuteScalarAsync(cancellationToken));
+                        var exists = (long)(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false));
                         return exists == 1;
                     }
                 }
@@ -229,7 +229,7 @@ namespace Microsoft.EntityFrameworkCore
                         )
                         THEN CAST(1 AS BIT)
                         ELSE CAST(0 AS BIT) END;";
-                        var exists = (bool)(await command.ExecuteScalarAsync());
+                        var exists = (bool)(await command.ExecuteScalarAsync().ConfigureAwait(false));
                         return exists;
                     }
                 }
@@ -280,7 +280,7 @@ namespace Microsoft.EntityFrameworkCore
                 foreach (var targetMigration in pendingMigrations)
                 {
                     var sql = migrator.GenerateScript(targetMigration, targetMigration);
-                    await migrator.MigrateAsync(targetMigration, cancellationToken);
+                    await migrator.MigrateAsync(targetMigration, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
