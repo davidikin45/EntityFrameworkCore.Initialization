@@ -31,7 +31,7 @@ namespace Microsoft.EntityFrameworkCore
 
         #region Ensure Db and Tables Created at a DbContext Level
         /// <summary>Adds objects that are used by the model for this context</summary>
-        public static async Task EnsureDbAndTablesCreatedAsync(this DbContext context, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<bool> EnsureDbAndTablesCreatedAsync(this DbContext context, CancellationToken cancellationToken = default(CancellationToken))
         {
             var created = await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
             if (!created)
@@ -50,6 +50,7 @@ namespace Microsoft.EntityFrameworkCore
                         try
                         {
                             await dependencies.MigrationCommandExecutor.ExecuteNonQueryAsync(new MigrationCommand[] { createTableCommand }, dependencies.Connection, cancellationToken).ConfigureAwait(false);
+                            created = true;
                         }
                         catch
                         {
@@ -58,13 +59,14 @@ namespace Microsoft.EntityFrameworkCore
                     }
                 }
             }
+            return created;
         }
         #endregion
 
         #region Delete Tables and Migrations DbContent Level
         /// <summary>Just removes the database objects that are used by the model for this context.</summary>
         /// <param name="context">The context.</param>
-        public static async Task EnsureTablesAndMigrationsDeletedAsync(this DbContext context, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<bool> EnsureTablesAndMigrationsDeletedAsync(this DbContext context, CancellationToken cancellationToken = default(CancellationToken))
         {
             bool dbExists = false;
             try
@@ -94,7 +96,7 @@ namespace Microsoft.EntityFrameworkCore
                         tableNames.Add(schemaAndTableName);
                     }
 
-                    var commands = new List<String>();
+                    var commands = new List<FormattableString>();
                     using (var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
                     {
 
@@ -105,8 +107,8 @@ namespace Microsoft.EntityFrameworkCore
                             {
                                 try
                                 {
-                                    var command = $"DROP TABLE IF EXISTS {t}";
-                                    await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
+                                    FormattableString command = $"DROP TABLE IF EXISTS {t}";
+                                    await context.Database.ExecuteSqlCommandAsync(command, cancellationToken).ConfigureAwait(false);
                                     commands.Add(command);
                                 }
                                 catch
@@ -123,7 +125,7 @@ namespace Microsoft.EntityFrameworkCore
                             {
                                 try
                                 {
-                                    var command = $"DELETE FROM [__EFMigrationsHistory] WHERE MigrationId = '{migrationId}'";
+                                    FormattableString command = $"DELETE FROM [__EFMigrationsHistory] WHERE MigrationId = '{migrationId}'";
                                     await context.Database.ExecuteSqlCommandAsync(command, cancellationToken).ConfigureAwait(false);
                                     commands.Add(command);
                                 }
@@ -141,21 +143,25 @@ namespace Microsoft.EntityFrameworkCore
                     {
                         foreach (var command in commands)
                         {
-                            await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
+                            await context.Database.ExecuteSqlCommandAsync(command, cancellationToken).ConfigureAwait(false);
                         }
 
                         transaction.Commit();
                     }
+
+                    return true;
                 }
                 else if (context.Database.IsInMemory())
                 {
-                    await context.Database.EnsureDeletedAsync(cancellationToken).ConfigureAwait(false);
+                    return await context.Database.EnsureDeletedAsync(cancellationToken).ConfigureAwait(false);
                 }
+
+                return false;
             }
             else
             {
                 //As long as the Db is online this will physically delete db.
-                await context.Database.EnsureDeletedAsync(cancellationToken).ConfigureAwait(false);
+                return await context.Database.EnsureDeletedAsync(cancellationToken).ConfigureAwait(false);
             }
         }
         #endregion
