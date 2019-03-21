@@ -80,3 +80,4 @@ public class Context : DbContext
 ## See Also
 * [Database Initialization](https://github.com/davidikin45/Database.Initialization)
 * [Hangfire Initialization](https://github.com/davidikin45/Hangfire.Initialization)
+* [MiniProfiler Initialization](https://github.com/davidikin45/MiniProfilerDb.Initialization)

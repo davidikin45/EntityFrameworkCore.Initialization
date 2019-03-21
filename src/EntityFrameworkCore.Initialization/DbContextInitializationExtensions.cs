@@ -47,11 +47,11 @@ namespace Microsoft.EntityFrameworkCore
                     var dependencies = context.Database.GetService<RelationalDatabaseCreatorDependencies>();
                     var createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, dependencies.Model), dependencies.Model);
 
-                    var persistedTables = await DbInitializer.TableNamesAsync(context.GetConnectionString(), cancellationToken).ConfigureAwait(false);
+                    var persistedTables = await DbInitializer.TablesAsync(context.Database.GetDbConnection(), cancellationToken).ConfigureAwait(false);
 
-                    var newTablesCommands = createTablesCommands.Where(command => !persistedTables.Any(persistedTable => command.CommandText.Contains($".{persistedTable}" + Environment.NewLine + " (") || command.CommandText.Contains($"TABLE {persistedTable}" + Environment.NewLine + " ("))).ToList();
+                    var newTablesCommands = createTablesCommands.Where(command => !persistedTables.Any(persistedTable => command.CommandText.Contains(dependencies.SqlGenerationHelper.DelimitIdentifier(persistedTable.TableName, persistedTable.Schema)))).ToList();
 
-                    if(newTablesCommands.Count() > 0)
+                    if (newTablesCommands.Count() > 0)
                     {
                         await dependencies.MigrationCommandExecutor.ExecuteNonQueryAsync(newTablesCommands, dependencies.Connection, cancellationToken).ConfigureAwait(false);
                         return true;
@@ -84,30 +84,35 @@ namespace Microsoft.EntityFrameworkCore
                 {
                     var modelTypes = context.GetModelTypes();
 
-                    var tableNames = new List<string>();
+                    var tableNames = new List<(string Schema, string TableName)>();
                     foreach (var entityType in modelTypes)
                     {
                         var mapping = context.Model.FindEntityType(entityType).Relational();
                         var schema = mapping.Schema;
                         var tableName = mapping.TableName;
 
-                        var schemaAndTableName = $"[{tableName}]";
-                        tableNames.Add(schemaAndTableName);
+                        tableNames.Add((schema, tableName));
                     }
 
-                    var commands = new List<FormattableString>();
+                    var persistedTables = await DbInitializer.TablesAsync(context.Database.GetDbConnection(), cancellationToken).ConfigureAwait(false);
+
+                    var commands = new List<string>();
                     using (var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
                     {
+                        var deleteTables = tableNames.Where(t => persistedTables.Any(pt => pt.TableName == t.TableName)).ToList();
 
                         //Drop tables
-                        foreach (var tableName in tableNames)
+                        foreach (var tableName in deleteTables)
                         {
-                            foreach (var t in tableNames)
+                            foreach (var t in deleteTables)
                             {
+                                var schema = !string.IsNullOrEmpty(t.Schema) ? $"[{t.Schema}]." : "";
+                                var table = $"[{t.TableName}]";
+
                                 try
                                 {
-                                    FormattableString command = $"DROP TABLE IF EXISTS {t}";
-                                    await context.Database.ExecuteSqlCommandAsync(command, cancellationToken).ConfigureAwait(false);
+                                    string command = $"DROP TABLE {schema}{table}";
+                                    await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
                                     commands.Add(command);
                                 }
                                 catch
@@ -124,8 +129,8 @@ namespace Microsoft.EntityFrameworkCore
                             {
                                 try
                                 {
-                                    FormattableString command = $"DELETE FROM [__EFMigrationsHistory] WHERE MigrationId = '{migrationId}'";
-                                    await context.Database.ExecuteSqlCommandAsync(command, cancellationToken).ConfigureAwait(false);
+                                    string command = $"DELETE FROM [__EFMigrationsHistory] WHERE MigrationId = '{migrationId}'";
+                                    await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
                                     commands.Add(command);
                                 }
                                 catch
@@ -142,7 +147,7 @@ namespace Microsoft.EntityFrameworkCore
                     {
                         foreach (var command in commands)
                         {
-                            await context.Database.ExecuteSqlCommandAsync(command, cancellationToken).ConfigureAwait(false);
+                            await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
                         }
 
                         transaction.Commit();
