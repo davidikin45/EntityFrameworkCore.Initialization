@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using Database.Initialization;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -45,17 +46,15 @@ namespace Microsoft.EntityFrameworkCore
                 {
                     var dependencies = context.Database.GetService<RelationalDatabaseCreatorDependencies>();
                     var createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, dependencies.Model), dependencies.Model);
-                    foreach (var createTableCommand in createTablesCommands)
-                    {
-                        try
-                        {
-                            await dependencies.MigrationCommandExecutor.ExecuteNonQueryAsync(new MigrationCommand[] { createTableCommand }, dependencies.Connection, cancellationToken).ConfigureAwait(false);
-                            created = true;
-                        }
-                        catch
-                        {
 
-                        }
+                    var persistedTables = await DbInitializer.TableNamesAsync(context.GetConnectionString(), cancellationToken).ConfigureAwait(false);
+
+                    var newTablesCommands = createTablesCommands.Where(command => !persistedTables.Any(persistedTable => command.CommandText.Contains($".{persistedTable}" + Environment.NewLine + " (") || command.CommandText.Contains($"TABLE {persistedTable}" + Environment.NewLine + " ("))).ToList();
+
+                    if(newTablesCommands.Count() > 0)
+                    {
+                        await dependencies.MigrationCommandExecutor.ExecuteNonQueryAsync(newTablesCommands, dependencies.Connection, cancellationToken).ConfigureAwait(false);
+                        return true;
                     }
                 }
             }
@@ -252,6 +251,15 @@ namespace Microsoft.EntityFrameworkCore
         {
             var sql = context.Database.GenerateCreateScript();
             return sql;
+        }
+        #endregion
+
+        #region Create Tables Commands
+        public static List<string> GenerateCreateTablesCommands(this DbContext context)
+        {
+            var dependencies = context.Database.GetService<RelationalDatabaseCreatorDependencies>();
+            var createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, dependencies.Model), dependencies.Model);
+            return createTablesCommands.Select(command => command.CommandText).ToList();
         }
         #endregion
 
