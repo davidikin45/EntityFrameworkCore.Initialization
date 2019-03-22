@@ -97,50 +97,35 @@ namespace Microsoft.EntityFrameworkCore
                     var persistedTables = await DbInitializer.TablesAsync(context.Database.GetDbConnection(), cancellationToken).ConfigureAwait(false);
 
                     var commands = new List<string>();
-                    using (var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
+
+                    var deleteTables = tableNames.Where(t => persistedTables.Any(pt => pt.TableName == t.TableName)).ToList();
+
+                    //Drop tables
+                    foreach (var tableName in deleteTables)
                     {
-                        var deleteTables = tableNames.Where(t => persistedTables.Any(pt => pt.TableName == t.TableName)).ToList();
-
-                        //Drop tables
-                        foreach (var tableName in deleteTables)
+                        foreach (var t in deleteTables)
                         {
-                            foreach (var t in deleteTables)
-                            {
-                                var schema = !string.IsNullOrEmpty(t.Schema) ? $"[{t.Schema}]." : "";
-                                var table = $"[{t.TableName}]";
+                            var schema = !string.IsNullOrEmpty(t.Schema) ? $"[{t.Schema}]." : "";
+                            var table = $"[{t.TableName}]";
 
-                                try
-                                {
-                                    string command = $"DROP TABLE {schema}{table}";
-                                    await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
-                                    commands.Add(command);
-                                }
-                                catch
-                                {
+                            string command = $@"BEGIN TRY
+                                                        DROP TABLE {schema}{table}
+                                                        END TRY
+                                                        BEGIN CATCH
+                                                        END CATCH";
 
-                                }
-                            }
+                            commands.Add(command);
                         }
+                    }
 
-                        //Delete migrations
-                        if (await TableExistsAsync(context.Database, "__EFMigrationsHistory", cancellationToken))
+                    //Delete migrations
+                    if (await TableExistsAsync(context.Database, "__EFMigrationsHistory", cancellationToken))
+                    {
+                        foreach (var migrationId in context.Database.Migrations())
                         {
-                            foreach (var migrationId in context.Database.Migrations())
-                            {
-                                try
-                                {
-                                    string command = $"DELETE FROM [__EFMigrationsHistory] WHERE MigrationId = '{migrationId}'";
-                                    await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
-                                    commands.Add(command);
-                                }
-                                catch
-                                {
-
-                                }
-                            }
+                            string command = $"DELETE FROM [__EFMigrationsHistory] WHERE MigrationId = '{migrationId}'";
+                            commands.Add(command);
                         }
-
-                        transaction.Rollback();
                     }
 
                     using (var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
@@ -213,34 +198,71 @@ namespace Microsoft.EntityFrameworkCore
             {
                 if (databaseFacade.IsSqlite())
                 {
-                    using (var command = databaseFacade.GetDbConnection().CreateCommand())
+                    var conn = databaseFacade.GetDbConnection();
+                    using (var command = conn.CreateCommand())
                     {
+                        var opened = false;
+                        if (conn.State != System.Data.ConnectionState.Open)
+                        {
+                            await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                            opened = true;
+                        }
+
                         if (databaseFacade.CurrentTransaction != null)
                             command.Transaction = databaseFacade.CurrentTransaction.GetDbTransaction();
 
-                        command.CommandText = $@"SELECT CASE WHEN EXISTS (
-                            SELECT * FROM ""sqlite_master"" WHERE ""type"" = 'table' AND ""rootpage"" IS NOT NULL AND ""tbl_name"" = '{tableName}'
-                        )
-                        THEN CAST(1 AS BIT)
-                        ELSE CAST(0 AS BIT) END;";
-                        var exists = (long)(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false));
-                        return exists == 1;
+                        try
+                        { 
+                            command.CommandText = $@"SELECT CASE WHEN EXISTS (
+                                SELECT * FROM ""sqlite_master"" WHERE ""type"" = 'table' AND ""rootpage"" IS NOT NULL AND ""tbl_name"" = '{tableName}'
+                            )
+                            THEN CAST(1 AS BIT)
+                            ELSE CAST(0 AS BIT) END;";
+                            var exists = (long)(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false));
+
+                            return exists == 1;
+                        }
+                        finally
+                        {
+                            if (opened && conn.State == System.Data.ConnectionState.Open)
+                            {
+                                conn.Close();
+                            }
+                        }
                     }
                 }
                 else
                 {
+                    var conn = databaseFacade.GetDbConnection();
                     using (var command = databaseFacade.GetDbConnection().CreateCommand())
                     {
+                        var opened = false;
+                        if (conn.State != System.Data.ConnectionState.Open)
+                        {
+                            await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                            opened = true;
+                        }
+
                         if (databaseFacade.CurrentTransaction != null)
                             command.Transaction = databaseFacade.CurrentTransaction.GetDbTransaction();
 
-                        command.CommandText = $@"SELECT CASE WHEN EXISTS (
+                        try
+                        {
+                            command.CommandText = $@"SELECT CASE WHEN EXISTS (
                             SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = '{tableName}'
-                        )
-                        THEN CAST(1 AS BIT)
-                        ELSE CAST(0 AS BIT) END;";
-                        var exists = (bool)(await command.ExecuteScalarAsync().ConfigureAwait(false));
-                        return exists;
+                            )
+                            THEN CAST(1 AS BIT)
+                            ELSE CAST(0 AS BIT) END;";
+                            var exists = (bool)(await command.ExecuteScalarAsync().ConfigureAwait(false));
+                            return exists;
+                        }
+                        finally
+                        {
+                            if (opened && conn.State == System.Data.ConnectionState.Open)
+                            {
+                                conn.Close();
+                            }
+                        }
                     }
                 }
             }
