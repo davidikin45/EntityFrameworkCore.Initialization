@@ -11,8 +11,8 @@
     <RepositoryUrl>https://github.com/davidikin45/EntityFrameworkCore.Initialization</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>EntityFrameworkCore Initialization</PackageTags>
-    <Version>1.0.7</Version>
-    <AssemblyVersion>1.0.7.0</AssemblyVersion>
+    <Version>1.0.8</Version>
+    <AssemblyVersion>1.0.8.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

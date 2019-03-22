@@ -101,18 +101,32 @@ namespace Microsoft.EntityFrameworkCore
                     var deleteTables = tableNames.Where(t => persistedTables.Any(pt => pt.TableName == t.TableName)).ToList();
 
                     //Drop tables
-                    foreach (var tableName in deleteTables)
+                    if (context.Database.IsSqlServer())
                     {
-                        foreach (var t in deleteTables)
+                        foreach (var tableName in deleteTables)
                         {
-                            var schema = !string.IsNullOrEmpty(t.Schema) ? $"[{t.Schema}]." : "";
-                            var table = $"[{t.TableName}]";
+                            foreach (var t in deleteTables)
+                            {
+                                var schema = !string.IsNullOrEmpty(t.Schema) ? $"[{t.Schema}]." : "";
+                                var table = $"[{t.TableName}]";
 
-                            string command = $@"BEGIN TRY
+                                string command = $@"BEGIN TRY
                                                         DROP TABLE {schema}{table}
                                                         END TRY
                                                         BEGIN CATCH
                                                         END CATCH";
+
+                                commands.Add(command);
+                            }
+                        }
+                    }
+                    else if (context.Database.IsSqlite())
+                    {
+                        foreach (var t in deleteTables)
+                        {
+                            var table = $"[{t.TableName}]";
+
+                            string command = $"DROP TABLE {table}";
 
                             commands.Add(command);
                         }
@@ -212,7 +226,7 @@ namespace Microsoft.EntityFrameworkCore
                             command.Transaction = databaseFacade.CurrentTransaction.GetDbTransaction();
 
                         try
-                        { 
+                        {
                             command.CommandText = $@"SELECT CASE WHEN EXISTS (
                                 SELECT * FROM ""sqlite_master"" WHERE ""type"" = 'table' AND ""rootpage"" IS NOT NULL AND ""tbl_name"" = '{tableName}'
                             )
