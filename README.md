@@ -1,4 +1,5 @@
 # EF Core Initialization
+[![nuget](https://img.shields.io/nuget/v/EntityFrameworkCore.Initialization.svg)](https://www.nuget.org/packages/EntityFrameworkCore.Initialization/)
 
 * The way EF Core initialization/destruction (context.Database.EnsureCreated & context.Database.EnsureDeleted) has been developed is that it assumes each DbContext uses a seperate physical data store. 
 * This assumption is probably correct for production but when developing/prototyping I like to have multiple DbContexts using the same physical localDB/Sqlite data store.
