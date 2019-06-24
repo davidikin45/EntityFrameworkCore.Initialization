@@ -1,10 +1,22 @@
 # EF Core Initialization
-[![nuget](https://img.shields.io/nuget/v/EntityFrameworkCore.Initialization.svg)](https://www.nuget.org/packages/EntityFrameworkCore.Initialization/)
+[![nuget](https://img.shields.io/nuget/v/EntityFrameworkCore.Initialization.svg)](https://www.nuget.org/packages/EntityFrameworkCore.Initialization/)  ![Downloads](https://img.shields.io/nuget/dt/EntityFrameworkCore.Initialization.svg "Downloads")
 
 * The way EF Core initialization/destruction (context.Database.EnsureCreated & context.Database.EnsureDeleted) has been developed is that it assumes each DbContext uses a seperate physical data store. 
 * This assumption is probably correct for production but when developing/prototyping I like to have multiple DbContexts using the same physical localDB/Sqlite data store.
 * I have created the following extension methods which aims to allow each DbContext to be initialized & destroyed independently based on its Model. This also allows for a DbContent to switch from EnsureCreated() and Migrate() easily.
 * Generally in staging/production environments all contexts will call context.Database.Migrate() which automatically allows for multiple DbContexts to use the same physical sql data store.
+
+## Installation
+
+### NuGet
+```
+PM> Install-Package EntityFrameworkCore.Initialization
+```
+
+### .Net CLI
+```
+> dotnet add package EntityFrameworkCore.Initialization
+```
 
 ## Usage
 * context.EnsureTablesAndMigrationsDeletedAsync() = Ensures only tables and migrations related to this context are deleted.
