@@ -69,6 +69,31 @@ namespace EntityFrameworkCore.Initialization.Converters
                 }
             }
         }
+
+        public static void AddMultiLangaugeStringValues(this ModelBuilder modelBuilder)
+        {
+            if (modelBuilder == null)
+                throw new ArgumentNullException(nameof(modelBuilder));
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var clrPropertyType in entityType.ClrType.GetProperties())
+                {
+                    var multiLanguage = clrPropertyType.PropertyType == typeof(MultiLanguageString);
+                    if (multiLanguage)
+                    {
+                        var property = modelBuilder.Entity(entityType.ClrType).Property(clrPropertyType.Name).Metadata;
+
+                        var modelType = clrPropertyType.PropertyType;
+                        var converterType = typeof(JsonValueConverter<>).MakeGenericType(modelType);
+                        var converter = (ValueConverter)Activator.CreateInstance(converterType, new object[] { null });
+                        property.SetValueConverter(converter);
+                        var valueComparer = typeof(JsonValueComparer<>).MakeGenericType(modelType);
+                        property.SetValueComparer((ValueComparer)Activator.CreateInstance(valueComparer, new object[0]));
+                    }
+                }
+            }
+        }
     }
 
     [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
