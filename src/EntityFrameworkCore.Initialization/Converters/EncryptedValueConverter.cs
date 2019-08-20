@@ -1,14 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using NETCore.Encrypt;
 using System;
 using System.Linq;
-using System.Linq.Expressions;
 
 namespace EntityFrameworkCore.Initialization.Converters
 {
     public static class EncryptedConverterExtensions
     {
-        public static void AddEncryptedValues(this ModelBuilder modelBuilder)
+        public static void AddEncryptedValues(this ModelBuilder modelBuilder, string AesKey)
         {
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
@@ -17,7 +17,7 @@ namespace EntityFrameworkCore.Initialization.Converters
                     var attributes = property.PropertyInfo.GetCustomAttributes(typeof(EncryptedAttribute), false);
                     if (attributes != null && attributes.Any())
                     {
-                        property.SetValueConverter(new EncryptedConverter());
+                        property.SetValueConverter(new EncryptedConverter(AesKey));
                     }
                 }
             }
@@ -30,11 +30,10 @@ namespace EntityFrameworkCore.Initialization.Converters
 
     public class EncryptedConverter : ValueConverter<string, string>
     {
-        public EncryptedConverter(ConverterMappingHints mappingHints = default)
-            : base(EncryptExpr, DecryptExpr, mappingHints)
-        { }
+        public EncryptedConverter(string AesKey, ConverterMappingHints mappingHints = default)
+            : base(data => EncryptProvider.AESEncrypt(data, AesKey), data => EncryptProvider.AESDecrypt(data, AesKey), mappingHints)
+        {
 
-        static Expression<Func<string, string>> DecryptExpr = x => new string(x.Reverse().ToArray());
-        static Expression<Func<string, string>> EncryptExpr = x => new string(x.Reverse().ToArray());
+        }
     }
 }
