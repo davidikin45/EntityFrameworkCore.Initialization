@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
 
 namespace EntityFrameworkCore.Initialization.Converters
 {
+    //https://github.com/aspnet/Extensions/blob/master/src/Localization/Abstractions/src/LocalizedString.cs
     public class MultiLanguageString : Dictionary<string, string>
     {
-        private readonly string _defaultLanguage;
-        public MultiLanguageString(string defaultLanguage = "en")
+        private readonly string _defaultCulture;
+        public MultiLanguageString(string defaultCulture = "")
         {
-            _defaultLanguage = defaultLanguage;
-            this.Add(_defaultLanguage, null);
+            _defaultCulture = defaultCulture;
+            this.Add(_defaultCulture, null);
         }
 
         public string Value()
@@ -29,13 +28,34 @@ namespace EntityFrameworkCore.Initialization.Converters
             }
             else
             {
-                return this[_defaultLanguage];
+                return this[_defaultCulture];
             }
         }
 
-        public override string ToString()
+        public void SetValue(string value)
         {
-            return Value();
+            var culture = CultureInfo.CurrentUICulture.Name;
+            var language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+            if (ContainsKey(culture))
+            {
+                this[culture] = value;
+            }
+            else if (ContainsKey(language))
+            {
+               this[language] = value;
+            }
+            else
+            {
+                this[_defaultCulture] = value;
+            }
+        }
+
+        public override string ToString() => Value();
+
+        public static implicit operator string(MultiLanguageString multiLanguageString)
+        {
+            return multiLanguageString?.Value();
         }
     }
 }
