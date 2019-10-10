@@ -87,9 +87,15 @@ namespace Microsoft.EntityFrameworkCore
                     var tableNames = new List<(string Schema, string TableName)>();
                     foreach (var entityType in modelTypes)
                     {
-                        var mapping = context.Model.FindEntityType(entityType).Relational();
+#if NETCOREAPP3_0
+                        var type = context.Model.FindEntityType(entityType);
+                        var schema = type.GetSchema();
+                        var tableName = type.GetTableName();
+#else
+                         var mapping = context.Model.FindEntityType(entityType).Relational();
                         var schema = mapping.Schema;
                         var tableName = mapping.TableName;
+#endif
 
                         tableNames.Add((schema, tableName));
                     }
@@ -167,9 +173,9 @@ namespace Microsoft.EntityFrameworkCore
                 return await context.Database.EnsureDeletedAsync(cancellationToken).ConfigureAwait(false);
             }
         }
-        #endregion
+#endregion
 
-        #region Clear Data at a DbContext Level
+#region Clear Data at a DbContext Level
         public static void ClearData(this DbContext context)
         {
             var modelTypes = context.GetModelTypes();
@@ -186,9 +192,9 @@ namespace Microsoft.EntityFrameworkCore
         static readonly MethodInfo SetMethod = typeof(DbContext).GetMethod(nameof(DbContext.Set));
         private static IQueryable Set(this DbContext context, Type entityType) =>
             (IQueryable)SetMethod.MakeGenericMethod(entityType).Invoke(context, null);
-        #endregion
+#endregion
 
-        #region Exists
+#region Exists
         public static async Task<bool> ExistsAsync(this DatabaseFacade databaseFacade, CancellationToken cancellationToken = default(CancellationToken))
         {
             var relationalDatabaseCreator = databaseFacade.GetService<IDatabaseCreator>() as RelationalDatabaseCreator;
@@ -202,9 +208,9 @@ namespace Microsoft.EntityFrameworkCore
                 return true;
             }
         }
-        #endregion
+#endregion
 
-        #region Table Exists
+#region Table Exists
         public static async Task<bool> TableExistsAsync(this DatabaseFacade databaseFacade, string tableName, CancellationToken cancellationToken = default(CancellationToken))
         {
             var relationalDatabaseCreator = databaseFacade.GetService<IDatabaseCreator>() as RelationalDatabaseCreator;
@@ -285,47 +291,47 @@ namespace Microsoft.EntityFrameworkCore
                 return false;
             }
         }
-        #endregion
+#endregion
 
-        #region Create Tables Script
+#region Create Tables Script
         public static string GenerateCreateTablesScript(this DbContext context)
         {
             var sql = context.Database.GenerateCreateScript();
             return sql;
         }
-        #endregion
+#endregion
 
-        #region Create Tables Commands
+#region Create Tables Commands
         public static List<string> GenerateCreateTablesCommands(this DbContext context)
         {
             var dependencies = context.Database.GetService<RelationalDatabaseCreatorDependencies>();
             var createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, dependencies.Model), dependencies.Model);
             return createTablesCommands.Select(command => command.CommandText).ToList();
         }
-        #endregion
+#endregion
 
-        #region Migration Script
+#region Migration Script
         public static string GenerateMigrationScript(this DatabaseFacade database, string fromMigration = null, string toMigration = null)
         {
             return database.GetService<IMigrator>().GenerateScript(fromMigration, toMigration);
         }
-        #endregion
+#endregion
 
-        #region Pending Migrations 
+#region Pending Migrations 
         public static IEnumerable<string> PendingMigrations(this DatabaseFacade database)
         {
             return database.GetPendingMigrations().ToList();
         }
-        #endregion
+#endregion
 
-        #region Migrations 
+#region Migrations 
         public static IEnumerable<string> Migrations(this DatabaseFacade database)
         {
             return database.GetMigrations().ToList();
         }
-        #endregion
+#endregion
 
-        #region Apply Pending Migrations
+#region Apply Pending Migrations
         public static async Task EnsureMigratedStepByStepAsync(this DatabaseFacade database, CancellationToken cancellationToken = default(CancellationToken))
         {
             var pendingMigrations = PendingMigrations(database);
@@ -339,9 +345,9 @@ namespace Microsoft.EntityFrameworkCore
                 }
             }
         }
-        #endregion
+#endregion
 
-        #region Get Entity Table Info
+#region Get Entity Table Info
         public static (string TableName, string tableSchema, List<(string ColumnName, string ColumnType)> columns) EntityTableInfo<T>(this DbContext context)
         {
             return EntityTableInfo(context, typeof(T));
@@ -352,24 +358,35 @@ namespace Microsoft.EntityFrameworkCore
             var entityType = context.Model.FindEntityType(type);
 
             // Table info 
+#if NETCOREAPP3_0
+            var tableSchema = entityType.GetSchema();
+            var tableName = entityType.GetTableName();
+#else
             var tableName = entityType.Relational().TableName;
             var tableSchema = entityType.Relational().Schema;
+#endif
 
             var columns = new List<(string ColumnName, string ColumnType)>();
 
             // Column info 
             foreach (var property in entityType.GetProperties())
             {
-                var columnName = property.Relational().ColumnName;
-                var columnType = property.Relational().ColumnType;
+#if NETCOREAPP3_0
+                var columnName = property.GetColumnName();
+                var columnType = property.GetColumnType();
+#else
+            var columnName = property.Relational().ColumnName;
+            var columnType = property.Relational().ColumnType;
+#endif
+
                 columns.Add((columnName, columnType));
             };
 
             return (tableName, tableSchema, columns);
         }
-        #endregion
+#endregion
 
-        #region Get Entity Model Types
+#region Get Entity Model Types
         public static IEnumerable<IEntityType> GetEntityTypes(this DbContext context)
         {
             return context.Model.GetEntityTypes();
@@ -379,6 +396,6 @@ namespace Microsoft.EntityFrameworkCore
         {
             return context.Model.GetEntityTypes().Select(t => t.ClrType);
         }
-        #endregion
+#endregion
     }
 }
