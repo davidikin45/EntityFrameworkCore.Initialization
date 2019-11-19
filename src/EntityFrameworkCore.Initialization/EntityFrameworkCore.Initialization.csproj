@@ -11,13 +11,13 @@
     <RepositoryUrl>https://github.com/davidikin45/EntityFrameworkCore.Initialization</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>EntityFrameworkCore Initialization</PackageTags>
-    <Version>2.0.1</Version>
-    <AssemblyVersion>2.0.1.0</AssemblyVersion>
-    <FileVersion>2.0.1.0</FileVersion>
+    <Version>2.0.2</Version>
+    <AssemblyVersion>2.0.2.0</AssemblyVersion>
+    <FileVersion>2.0.2.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Database.Initialization" Version="1.0.17" />
+    <PackageReference Include="Database.Initialization" Version="1.0.18" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="3.0.0" />
     <PackageReference Include="NETCore.Encrypt" Version="2.0.8" />
