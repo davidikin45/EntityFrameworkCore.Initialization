@@ -3,7 +3,7 @@
 
 * The way EF Core initialization/destruction (context.Database.EnsureCreated & context.Database.EnsureDeleted) has been developed is that it assumes each DbContext uses a seperate physical data store. 
 * This assumption is probably correct for production but when developing/prototyping I like to have multiple DbContexts using the same physical localDB/Sqlite data store.
-* Perfect for [Modular Monoliths as often Microservices are often overkill](https://medium.com/design-and-tech-co/modular-monoliths-a-gateway-to-microservices-946f2cbdf382). Microservices allow for independent versioning, release and scaling but increase complexity which is often not needed. Modular Monoliths means each module has independent Presentation, Business and Data like Microservices but are packaged together for Deployment.
+* Perfect for [Modular Monoliths as often Microservices are often overkill](https://dev.to/jamesmh/modular-monoliths-and-composite-uis-with-net-core-razor-class-libraries-2394). Microservices allow for independent versioning, release and scaling but increase complexity which is often not needed. Modular Monoliths means each module has independent Presentation, Business and Data like Microservices but are packaged together for Deployment.
 * I have created the following extension methods which aims to allow each DbContext to be initialized & destroyed independently based on its Model. This also allows for a DbContent to switch from EnsureCreated() and Migrate() easily.
 * Generally in staging/production environments all contexts will call context.Database.Migrate() which automatically allows for multiple DbContexts to use the same physical sql data store.
 
@@ -95,3 +95,5 @@ public class Context : DbContext
 * [Database Initialization](https://github.com/davidikin45/Database.Initialization)
 * [Hangfire Initialization](https://github.com/davidikin45/Hangfire.Initialization)
 * [MiniProfiler Initialization](https://github.com/davidikin45/MiniProfilerDb.Initialization)
+* [Modular Monoliths And Composite UIs With .NET Core Razor Class Libraries](https://dev.to/jamesmh/modular-monoliths-and-composite-uis-with-net-core-razor-class-libraries-2394)
+* [Modular Monoliths — A Gateway to Microservices](https://medium.com/design-and-tech-co/modular-monoliths-a-gateway-to-microservices-946f2cbdf382)
