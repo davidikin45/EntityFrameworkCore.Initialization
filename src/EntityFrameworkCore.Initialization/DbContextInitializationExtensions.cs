@@ -87,15 +87,15 @@ namespace Microsoft.EntityFrameworkCore
                     var tableNames = new List<(string Schema, string TableName)>();
                     foreach (var entityType in modelTypes)
                     {
-#if NETCOREAPP3_0
+
                         var type = context.Model.FindEntityType(entityType);
                         var schema = type.GetSchema();
                         var tableName = type.GetTableName();
-#else
-                         var mapping = context.Model.FindEntityType(entityType).Relational();
-                        var schema = mapping.Schema;
-                        var tableName = mapping.TableName;
-#endif
+
+                        //.NET Core 2.2
+                        //var mapping = context.Model.FindEntityType(entityType).Relational();
+                        //var schema = mapping.Schema;
+                        //var tableName = mapping.TableName;
 
                         tableNames.Add((schema, tableName));
                     }
@@ -358,26 +358,27 @@ namespace Microsoft.EntityFrameworkCore
             var entityType = context.Model.FindEntityType(type);
 
             // Table info 
-#if NETCOREAPP3_0
+
             var tableSchema = entityType.GetSchema();
             var tableName = entityType.GetTableName();
-#else
-            var tableName = entityType.Relational().TableName;
-            var tableSchema = entityType.Relational().Schema;
-#endif
+
+            //.NET Core 2.2
+            //var tableName = entityType.Relational().TableName;
+            //var tableSchema = entityType.Relational().Schema;
 
             var columns = new List<(string ColumnName, string ColumnType)>();
 
             // Column info 
             foreach (var property in entityType.GetProperties())
             {
-#if NETCOREAPP3_0
+
                 var columnName = property.GetColumnName();
                 var columnType = property.GetColumnType();
-#else
-            var columnName = property.Relational().ColumnName;
-            var columnType = property.Relational().ColumnType;
-#endif
+
+            //.NET Core 2.2
+            //var columnName = property.Relational().ColumnName;
+            //var columnType = property.Relational().ColumnType;
+
 
                 columns.Add((columnName, columnType));
             };

@@ -73,13 +73,12 @@ namespace EntityFrameworkCore.Initialization
                     sqlOptions.UseNetTopologySuite();
                 });
             }
-#if NETCOREAPP3_0
+
             else if (ConnectionStringHelper.IsCosmos(connectionString))
             {
                 var dbConnectionString = new CosmosDBConnectionString(connectionString);
                 return options.UseCosmos(dbConnectionString.ServiceEndpoint.ToString(), dbConnectionString.AuthKey, null);
             }
-#endif
             else
             {
                 if (!string.IsNullOrWhiteSpace(migrationsAssembly))
