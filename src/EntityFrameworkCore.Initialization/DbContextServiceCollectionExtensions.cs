@@ -43,7 +43,7 @@ namespace EntityFrameworkCore.Initialization
             return services.AddDbContext<TContext>(options =>
             {
                 options.SetConnectionString<TContext>(connectionString);
-                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+                options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll); //Default
             }, contextLifetime);
         }
 
