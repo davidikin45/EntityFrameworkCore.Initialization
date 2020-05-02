@@ -16,7 +16,7 @@ namespace EntityFrameworkCore.Initialization.Converters
             {
                 foreach (var property in entityType.GetProperties())
                 {
-                    var attributes = property.PropertyInfo.GetCustomAttributes(typeof(EncryptedAttribute), false);
+                    var attributes = property.PropertyInfo?.GetCustomAttributes(typeof(EncryptedAttribute), false);
                     if (attributes != null && attributes.Any())
                     {
                         property.SetValueConverter(new EncryptedConverter(aesKey));
@@ -31,7 +31,7 @@ namespace EntityFrameworkCore.Initialization.Converters
             {
                 foreach (var property in entityType.GetProperties())
                 {
-                    var attributes = property.PropertyInfo.GetCustomAttributes(typeof(EncryptedAttribute), false);
+                    var attributes = property.PropertyInfo?.GetCustomAttributes(typeof(EncryptedAttribute), false);
                     if (attributes != null && attributes.Any())
                     {
                         property.SetValueConverter(new EncryptedConverter(dataProtectionProvider));
