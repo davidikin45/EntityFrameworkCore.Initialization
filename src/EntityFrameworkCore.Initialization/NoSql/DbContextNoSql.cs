@@ -15,10 +15,10 @@ namespace EntityFrameworkCore.Initialization.NoSql
         }
 
         private readonly MemoryStream _memoryStream;
-        public DbContextNoSql(MemoryStream memryStream)
-           : base(memryStream)
+        public DbContextNoSql(MemoryStream memoryStream)
+           : base(memoryStream)
         {
-            _memoryStream = memryStream;
+            _memoryStream = memoryStream;
         }
 
         public abstract void Seed();

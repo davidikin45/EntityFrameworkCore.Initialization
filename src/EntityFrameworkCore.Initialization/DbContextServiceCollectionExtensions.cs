@@ -1,5 +1,6 @@
 ﻿using Database.Initialization;
 using EntityFrameworkCore.Initialization.NoSql;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -13,11 +14,7 @@ namespace EntityFrameworkCore.Initialization
         {
             if (ConnectionStringHelper.IsLiteDbInMemory(connectionString))
             {
-                contextLifetime = ServiceLifetime.Singleton;
-            }
-
-            if (ConnectionStringHelper.IsLiteDbInMemory(connectionString))
-            {
+                //contextLifetime = ServiceLifetime.Singleton;
                 services.AddDbContextNoSqlInMemory<TContext>(contextLifetime);
             }
             else
@@ -29,7 +26,8 @@ namespace EntityFrameworkCore.Initialization
 
         public static IServiceCollection AddDbContextNoSqlInMemory<TContext>(this IServiceCollection services, ServiceLifetime contextLifetime = ServiceLifetime.Scoped) where TContext : DbContextNoSql
         {
-            services.Add(new ServiceDescriptor(typeof(TContext), sp => ActivatorUtilities.CreateInstance(sp, typeof(TContext), new object[] { new MemoryStream() }), contextLifetime));
+            var conn = new MemoryStream();
+            services.Add(new ServiceDescriptor(typeof(TContext), sp => ActivatorUtilities.CreateInstance(sp, typeof(TContext), new object[] { conn }), contextLifetime));
             return services;
         }
 
@@ -37,14 +35,27 @@ namespace EntityFrameworkCore.Initialization
         {
             if (ConnectionStringHelper.IsSQLiteInMemory(connectionString))
             {
-                contextLifetime = ServiceLifetime.Singleton;
-            }
+                //contextLifetime = ServiceLifetime.Singleton;
+                var conn = new SqliteConnection("DataSource=:memory:");
+                conn.Open();
 
-            return services.AddDbContext<TContext>(options =>
+                return services.AddDbContext<TContext>(options =>
+                {
+                    options.UseSqlite(conn, sqlOptions =>
+                    {
+                        sqlOptions.UseNetTopologySuite();
+                    });
+                    options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll); //Default
+                }, contextLifetime);
+            }
+            else
             {
-                options.SetConnectionString<TContext>(connectionString);
-                options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll); //Default
-            }, contextLifetime);
+                return services.AddDbContext<TContext>(options =>
+                {
+                    options.SetConnectionString<TContext>(connectionString);
+                    options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll); //Default
+                }, contextLifetime);
+            }
         }
 
         public static DbContextOptionsBuilder SetConnectionString<TContext>(this DbContextOptionsBuilder options, string connectionString, string migrationsAssembly = "")
