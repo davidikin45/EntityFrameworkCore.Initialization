@@ -14,7 +14,7 @@ namespace EntityFrameworkCore.Initialization
         {
             if (ConnectionStringHelper.IsLiteDbInMemory(connectionString))
             {
-                //contextLifetime = ServiceLifetime.Singleton;
+                contextLifetime = ServiceLifetime.Singleton;
                 services.AddDbContextNoSqlInMemory<TContext>(contextLifetime);
             }
             else
