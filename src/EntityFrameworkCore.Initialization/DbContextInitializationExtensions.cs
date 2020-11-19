@@ -45,7 +45,18 @@ namespace Microsoft.EntityFrameworkCore
                 if (context.Database.IsSqlServer() || context.Database.IsSqlite())
                 {
                     var dependencies = context.Database.GetService<RelationalDatabaseCreatorDependencies>();
-                    var createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, dependencies.Model), dependencies.Model);
+
+                    dynamic model = dependencies.Model;
+                    try
+                    {
+                        model = model.GetRelationalModel();
+                    }
+                    catch
+                    { 
+                    
+                    }
+
+                    IReadOnlyList<MigrationCommand> createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, model), dependencies.Model);
 
                     var persistedTables = await DbInitializer.TablesAsync(context.Database.GetDbConnection(), cancellationToken).ConfigureAwait(false);
 
@@ -305,7 +316,17 @@ namespace Microsoft.EntityFrameworkCore
         public static List<string> GenerateCreateTablesCommands(this DbContext context)
         {
             var dependencies = context.Database.GetService<RelationalDatabaseCreatorDependencies>();
-            var createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, dependencies.Model), dependencies.Model);
+            dynamic model = dependencies.Model;
+            try
+            {
+                model = model.GetRelationalModel();
+            }
+            catch
+            {
+
+            }
+
+            IReadOnlyList<MigrationCommand> createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, model), dependencies.Model);
             return createTablesCommands.Select(command => command.CommandText).ToList();
         }
 #endregion
