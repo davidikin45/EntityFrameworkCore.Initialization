@@ -46,17 +46,7 @@ namespace Microsoft.EntityFrameworkCore
                 {
                     var dependencies = context.Database.GetService<RelationalDatabaseCreatorDependencies>();
 
-                    dynamic model = dependencies.Model;
-                    try
-                    {
-                        model = model.GetRelationalModel();
-                    }
-                    catch
-                    { 
-                    
-                    }
-
-                    IReadOnlyList<MigrationCommand> createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, model), dependencies.Model);
+                    IReadOnlyList<MigrationCommand> createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, dependencies.Model.GetRelationalModel()), dependencies.Model);
 
                     var persistedTables = await DbInitializer.TablesAsync(context.Database.GetDbConnection(), cancellationToken).ConfigureAwait(false);
 
@@ -316,17 +306,8 @@ namespace Microsoft.EntityFrameworkCore
         public static List<string> GenerateCreateTablesCommands(this DbContext context)
         {
             var dependencies = context.Database.GetService<RelationalDatabaseCreatorDependencies>();
-            dynamic model = dependencies.Model;
-            try
-            {
-                model = model.GetRelationalModel();
-            }
-            catch
-            {
 
-            }
-
-            IReadOnlyList<MigrationCommand> createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, model), dependencies.Model);
+            IReadOnlyList<MigrationCommand> createTablesCommands = dependencies.MigrationsSqlGenerator.Generate(dependencies.ModelDiffer.GetDifferences(null, dependencies.Model.GetRelationalModel()), dependencies.Model);
             return createTablesCommands.Select(command => command.CommandText).ToList();
         }
 #endregion
