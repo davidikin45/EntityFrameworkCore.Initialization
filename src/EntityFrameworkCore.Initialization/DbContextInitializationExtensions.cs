@@ -152,7 +152,7 @@ namespace Microsoft.EntityFrameworkCore
                     {
                         foreach (var command in commands)
                         {
-                            await context.Database.ExecuteSqlCommandAsync(new RawSqlString(command), cancellationToken).ConfigureAwait(false);
+                            await context.Database.ExecuteSqlRawAsync(command, cancellationToken).ConfigureAwait(false);
                         }
 
                         transaction.Commit();
